@@ -1,6 +1,7 @@
 import sys
 import subprocess
 import csv
+import urllib
 from optparse import OptionParser
 
 import settings
@@ -29,6 +30,28 @@ def write_introduction(people, message):
     i += "\n\n" + settings.valediction + ",\n\n" + settings.name
     return i
 
+def prompt_for_mail_client():
+    """Ask if user wants to launch default mail client"""
+    answ = raw_input("\nOpen default client with above message? (y/n) ").lower()
+    if not answ or answ not in ["y","n"]:
+        print "Please answer 'y' or 'n'."
+        return prompt_for_mail_client()
+    elif answ == "y":
+        return True
+    else:
+        return False
+
+def open_client(introducing, msg):
+    """Open default mail client with filled subject & body"""
+    subject = urllib.quote("Introduction from %s" % settings.name)
+    body = urllib.quote(msg)
+    s = "mailto:?subject=%s&body=%s" % (subject, body)
+    if "linux" in sys.platform:
+        proc_args = ["xdg-open", s]
+    elif "darwin" in sys.platform:
+        proc_args = ["open", s]
+    # TODO: os.startfile works in Windows?
+    p = subprocess.Popen(proc_args)
 
 if __name__ == '__main__':
     parser = OptionParser()
@@ -55,5 +78,10 @@ if __name__ == '__main__':
 
         msg = write_introduction(introducing, options.message)
         print msg
+
+        platform_ok = "linux" in sys.platform or "darwin" in sys.platform
+        if platform_ok and prompt_for_mail_client():
+            open_client(introducing, msg)
+
         p = subprocess.Popen(["pbcopy"],stdin=subprocess.PIPE)
         p.stdin.write(msg)
